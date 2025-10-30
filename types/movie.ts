@@ -10,11 +10,14 @@ export type Recommendation = {
   overview: string;
   posterUrl?: string | null;
   releaseYear?: string | null;
+  runtime?: number | null; // Runtime in minutes
   imdbRating?: string | null;
   rottenTomatoesRating?: string | null;
   trailerUrl?: string | null;
   reason?: string | null;
   providers: StreamingProvider[];
+  director?: string | null;
+  actors?: string[]; // Top 3-4 actors
 };
 
 export type RecommendRequest = {

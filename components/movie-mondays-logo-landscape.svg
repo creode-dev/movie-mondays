@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300" width="800" height="300">
+  <defs>
+    <!-- Dynamic gradient for background -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1"/>
+    </linearGradient>
+    
+    <!-- Vibrant gradient for accents -->
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e94560;stop-opacity:1"/>
+      <stop offset="50%" style="stop-color:#ff6b9d;stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#ffa07a;stop-opacity:1"/>
+    </linearGradient>
+    
+    <!-- Glow effect -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="800" height="300" fill="url(#bgGrad)"/>
+  
+  <!-- Dynamic diagonal film strips -->
+  <g opacity="0.12">
+    <rect x="50" y="-100" width="60" height="500" fill="#e94560" transform="rotate(12 400 150)"/>
+    <rect x="680" y="-100" width="60" height="500" fill="#ff6b9d" transform="rotate(-12 400 150)"/>
+  </g>
+  
+  <!-- Abstract motion lines -->
+  <g opacity="0.25" stroke="url(#accentGrad)" stroke-width="2" fill="none">
+    <path d="M 50 100 Q 200 95, 400 100 T 750 100" stroke-linecap="round"/>
+    <path d="M 50 200 Q 200 205, 400 200 T 750 200" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Left side: Circular play button element -->
+  <g transform="translate(150, 150)">
+    <circle cx="0" cy="0" r="60" fill="none" stroke="url(#accentGrad)" stroke-width="4" filter="url(#glow)"/>
+    <circle cx="0" cy="0" r="48" fill="none" stroke="url(#accentGrad)" stroke-width="2" opacity="0.5"/>
+    
+    <!-- Play triangle -->
+    <polygon points="-12,-20 -12,20 20,0" fill="url(#accentGrad)" filter="url(#glow)"/>
+  </g>
+  
+  <!-- Dynamic frame corners -->
+  <g stroke="url(#accentGrad)" stroke-width="3" fill="none" opacity="0.5">
+    <path d="M 40 40 L 40 70 M 40 40 L 70 40"/>
+    <path d="M 760 40 L 760 70 M 760 40 L 730 40"/>
+    <path d="M 40 260 L 40 230 M 40 260 L 70 260"/>
+    <path d="M 760 260 L 760 230 M 760 260 L 730 260"/>
+  </g>
+  
+  <!-- Main text: MOVIE MONDAYS - horizontal layout -->
+  <g transform="translate(400, 150)">
+    <!-- MOVIE -->
+    <text x="0" y="-10" font-family="'Arial Black', 'Helvetica', sans-serif" font-size="64" font-weight="900" 
+          text-anchor="middle" fill="#ffffff" letter-spacing="6">MOVIE</text>
+    
+    <!-- MONDAYS with gradient -->
+    <text x="0" y="60" font-family="'Arial Black', 'Helvetica', sans-serif" font-size="64" font-weight="900" 
+          text-anchor="middle" fill="url(#accentGrad)" letter-spacing="6" filter="url(#glow)">MONDAYS</text>
+  </g>
+  
+  <!-- Dynamic accent bar under text -->
+  <rect x="300" y="215" width="200" height="3" fill="url(#accentGrad)" rx="1.5" filter="url(#glow)"/>
+  
+  <!-- Small film strip detail -->
+  <g transform="translate(400, 235)">
+    <rect x="-35" y="0" width="70" height="12" fill="none" stroke="#e94560" stroke-width="1.5" rx="2"/>
+    <line x1="-25" y1="0" x2="-25" y2="12" stroke="#e94560" stroke-width="1.5"/>
+    <line x1="-5" y1="0" x2="-5" y2="12" stroke="#e94560" stroke-width="1.5"/>
+    <line x1="5" y1="0" x2="5" y2="12" stroke="#e94560" stroke-width="1.5"/>
+    <line x1="25" y1="0" x2="25" y2="12" stroke="#e94560" stroke-width="1.5"/>
+  </g>
+  
+  <!-- Animated dots suggesting motion - left side -->
+  <circle cx="80" cy="150" r="3" fill="#ff6b9d" opacity="0.8"/>
+  <circle cx="100" cy="145" r="4" fill="#ffa07a" opacity="0.6"/>
+  <circle cx="120" cy="155" r="2" fill="#e94560" opacity="0.7"/>
+  
+  <!-- Animated dots suggesting motion - right side -->
+  <circle cx="720" cy="150" r="3" fill="#ff6b9d" opacity="0.8"/>
+  <circle cx="700" cy="155" r="4" fill="#ffa07a" opacity="0.6"/>
+  <circle cx="680" cy="145" r="2" fill="#e94560" opacity="0.7"/>
+  
+  <!-- Additional decorative elements for balance -->
+  <g opacity="0.4">
+    <!-- Left accent line -->
+    <line x1="240" y1="150" x2="270" y2="150" stroke="url(#accentGrad)" stroke-width="2" stroke-linecap="round"/>
+    <!-- Right accent line -->
+    <line x1="530" y1="150" x2="560" y2="150" stroke="url(#accentGrad)" stroke-width="2" stroke-linecap="round"/>
+  </g>
+</svg>

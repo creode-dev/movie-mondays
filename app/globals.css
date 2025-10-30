@@ -7,7 +7,20 @@ html, body, :root {
 }
 
 body {
-  @apply bg-gray-50 text-gray-900;
+  @apply bg-[#1a1a2e] text-gray-100;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
 }
 
-
+@layer utilities {
+  .text-gradient-accent {
+    @apply bg-gradient-to-r from-[#e94560] via-[#ff6b9d] to-[#ffa07a] bg-clip-text text-transparent;
+  }
+  
+  .bg-gradient-accent {
+    background: linear-gradient(to right, #e94560, #ff6b9d, #ffa07a);
+  }
+  
+  .bg-gradient-dark {
+    background: linear-gradient(to bottom right, #1a1a2e, #16213e);
+  }
+}

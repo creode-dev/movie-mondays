@@ -1,5 +1,13 @@
 import './globals.css';
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import Logo from '@/components/Logo';
+
+const inter = Inter({ 
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+});
 
 export const metadata: Metadata = {
   title: 'Movie Mondays',
@@ -8,14 +16,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen">
-        <div className="mx-auto max-w-5xl px-4 py-8">
-          <header className="mb-6">
-            <h1 className="text-3xl font-semibold">Movie Mondays</h1>
-            <p className="text-sm text-gray-600">Find movies you will love, available on your services.</p>
+    <html lang="en" className="scroll-smooth">
+      <body className={`${inter.variable} font-sans min-h-screen bg-gradient-dark`}>
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <header className="mb-4 flex justify-center pb-3">
+            <Logo />
           </header>
-          {children}
+          <main>{children}</main>
         </div>
       </body>
     </html>

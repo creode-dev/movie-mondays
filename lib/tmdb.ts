@@ -79,7 +79,24 @@ export async function getWatchProviders(movieId: number, region: string = 'GB') 
   return data.results?.[region] ?? null;
 }
 
+export async function getMovieCredits(movieId: number) {
+  const data = await tmdbFetch(`/movie/${movieId}/credits`);
+  return {
+    cast: (data.cast || []).slice(0, 4) as Array<{ name: string; character?: string }>,
+    crew: (data.crew || []) as Array<{ name: string; job: string }>,
+  };
+}
+
+export async function getMovieDetails(movieId: number) {
+  return tmdbFetch(`/movie/${movieId}`, { language: 'en-GB' });
+}
+
 export function tmdbImage(path?: string | null, size: 'w342' | 'w500' = 'w342') {
+  if (!path) return null;
+  return `https://image.tmdb.org/t/p/${size}${path}`;
+}
+
+export function tmdbLogo(path?: string | null, size: 'w45' | 'w92' | 'w154' | 'w185' | 'w300' | 'w500' = 'w92') {
   if (!path) return null;
   return `https://image.tmdb.org/t/p/${size}${path}`;
 }
