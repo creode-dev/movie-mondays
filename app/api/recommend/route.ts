@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
     }
 
     const recommendations: Recommendation[] = [];
+    const otherServicesRecommendations: Recommendation[] = [];
     
     // For each AI recommendation, look up the movie in TMDB
     for (let i = 0; i < aiRecommendations.length; i++) {
@@ -166,15 +167,10 @@ export async function POST(req: NextRequest) {
           ? providersList.filter((p) => providers.includes(p.id))
           : providersList;
         
-        // Only include movies that are available on at least one of the user's selected streaming services
-        if (providers.length > 0 && filteredProviders.length === 0) {
-          continue; // Skip this movie if it's not available on any selected service
-        }
-
         // Prefer OMDB poster, fallback to TMDB poster
         const posterUrl = ratings.posterUrl || tmdbImage(movie.poster_path, 'w342');
 
-        recommendations.push({
+        const movieRec: Recommendation = {
           id: movie.id,
           title: movie.title || movie.name || aiRec.title,
           overview: movie.overview || '',
@@ -185,17 +181,40 @@ export async function POST(req: NextRequest) {
           rottenTomatoesRating: ratings.rottenTomatoesRating || null,
           trailerUrl,
           reason: aiRec.reason || undefined,
-          providers: filteredProviders, // Only show filtered providers (user's selected services)
+          providers: filteredProviders.length > 0 ? filteredProviders : providersList, // Show filtered if available, otherwise all
           director: director || null,
           actors: actors.length > 0 ? actors : undefined,
-        });
+        };
+
+        // Only include movies that are available on at least one of the user's selected streaming services
+        if (providers.length > 0 && filteredProviders.length === 0) {
+          // Movie not on selected services - add to otherServicesRecommendations
+          otherServicesRecommendations.push(movieRec);
+        } else {
+          recommendations.push(movieRec);
+        }
       } catch (e) {
         console.error(`Error processing movie "${aiRec.title}":`, e);
         // Continue to next movie
       }
     }
 
-    return NextResponse.json({ recommendations });
+    // Separate the final recommendations from other services
+    // Keep original recommendations separate from other services section
+    const finalRecommendations = [...recommendations];
+    
+    // Calculate how many "other services" movies to show (only if we have less than 6 main recommendations)
+    let otherServicesToShow: Recommendation[] = [];
+    if (recommendations.length < 6 && otherServicesRecommendations.length > 0) {
+      // Show remaining slots (up to 6 total) from other services
+      const slotsToFill = 6 - recommendations.length;
+      otherServicesToShow = otherServicesRecommendations.slice(0, slotsToFill);
+    }
+
+    return NextResponse.json({ 
+      recommendations: finalRecommendations,
+      otherServices: otherServicesToShow
+    });
   } catch (e: any) {
     console.error('Recommendation API error:', e);
     return NextResponse.json(

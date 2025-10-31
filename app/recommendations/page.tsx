@@ -8,6 +8,7 @@ export default function RecommendationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<Recommendation[]>([]);
+  const [otherServices, setOtherServices] = useState<Recommendation[]>([]);
 
   useEffect(() => {
     const raw = sessionStorage.getItem("mm_last_query");
@@ -29,7 +30,10 @@ export default function RecommendationsPage() {
         }
         return json;
       })
-      .then((json) => setData(json.recommendations ?? []))
+      .then((json) => {
+        setData(json.recommendations ?? []);
+        setOtherServices(json.otherServices ?? []);
+      })
       .catch((e) => {
         console.error('Error fetching recommendations:', e);
         setError(e.message || 'An error occurred');
@@ -67,13 +71,31 @@ export default function RecommendationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white">Your Recommendations</h2>
-        <a href="/" className="text-sm text-[#ff6b9d] hover:text-[#ffa07a] hover:underline transition-colors">← New search</a>
+        <div className="flex gap-4">
+          <a href="/favourites" className="text-sm text-[#ff6b9d] hover:text-[#ffa07a] hover:underline transition-colors">
+            My Favourites
+          </a>
+          <a href="/" className="text-sm text-[#ff6b9d] hover:text-[#ffa07a] hover:underline transition-colors">← New search</a>
+        </div>
       </div>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
         {data.map((rec) => (
           <MovieCard key={rec.id} movie={rec} />
         ))}
       </div>
+      {data.length < 6 && otherServices.length > 0 && (
+        <div className="mt-12 space-y-6">
+          <div className="border-t border-white/20 pt-6">
+            <h3 className="text-xl font-bold text-white mb-2">Available on Other Streaming Services</h3>
+            <p className="text-sm text-gray-400 mb-4">These films match your preferences but are available on services you haven't selected.</p>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
+              {otherServices.map((rec) => (
+                <MovieCard key={rec.id} movie={rec} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

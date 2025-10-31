@@ -8,17 +8,25 @@ export async function generateMovieRecommendations(userQuery: string, streamingS
     const servicesText = streamingServices.length > 0 ? ` available on ${streamingServices.join(', ')} in the UK` : '';
     const prompt = `User query: "${userQuery}"
 
-Generate 8-10 movie recommendations${servicesText}. Return ONLY a JSON array of objects with this exact structure:
+Generate 10-12 movie recommendations${servicesText}. Prioritize:
+1. Arthouse, international, and lesser-known films (60-70% of recommendations)
+2. Hidden gems and critically acclaimed but underappreciated films
+3. A mix of mainstream and arthouse to ensure diversity
+4. Films that match any specific criteria mentioned (ratings, runtime, genres, directors, actors, themes)
+
+Return ONLY a JSON array of objects with this exact structure:
 [
-  {"title": "Movie Title", "year": 2020, "reason": "One sentence explaining why the user might like this film based on their query"}
+  {"title": "Movie Title", "year": 2020, "reason": "One sentence explaining why the user might like this film based on their query. Be specific about what makes it special - cinematography, themes, performances, or unique storytelling."}
 ]
 
 Requirements:
 - Return ONLY valid JSON, no markdown, no explanations
-- Match the user's preferences from their query (actors, directors, genres, themes, etc.)
-- Include diverse recommendations
-- Reasons should be specific and avoid spoilers
-- If year is unknown, omit it`;
+- Match the user's preferences from their query (actors, directors, genres, themes, ratings, runtime, etc.)
+- Include diverse recommendations (mix of genres, eras, countries)
+- Prefer arthouse, international, and lesser-known films over blockbusters
+- Reasons should be specific, insightful, and avoid spoilers
+- If year is unknown, omit it
+- Prioritize quality films that the user may not have discovered yet`;
 
     const res = await client.messages.create({
       model: "claude-3-haiku-20240307",

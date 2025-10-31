@@ -10,7 +10,10 @@ Intelligent movie recommendations filtered by your UK streaming services.
 TMDB_API_KEY=your_tmdb_bearer_token
 OMDB_API_KEY=your_omdb_key
 ANTHROPIC_API_KEY=your_anthropic_api_key
+NEXT_PUBLIC_SITE_URL=https://your-domain.com
 ```
+
+**Note:** `NEXT_PUBLIC_SITE_URL` should be your production URL (e.g., `https://movie-mondays.vercel.app`) for proper social media preview links.
 
 Notes:
 - TMDB expects a Bearer token (v4 auth). Copy the "API Read Access Token (v4 auth)" from TMDB settings.
@@ -50,6 +53,7 @@ This app works perfectly on Vercel!
    - `TMDB_API_KEY` - Your TMDB v4 Read Access Token
    - `OMDB_API_KEY` - Your OMDB API key  
    - `ANTHROPIC_API_KEY` - Your Anthropic API key
+   - `NEXT_PUBLIC_SITE_URL` - Your production URL (e.g., `https://movie-mondays.vercel.app`) for social media previews
 
 4. **Deploy!**
    - Click "Deploy"

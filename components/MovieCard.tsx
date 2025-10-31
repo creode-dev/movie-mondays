@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { Recommendation } from "@/types/movie";
 import StreamingBadge from "@/components/StreamingBadge";
 
@@ -12,6 +15,43 @@ function formatRuntime(minutes: number | null | undefined): string {
 }
 
 export default function MovieCard({ movie }: { movie: Recommendation }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isFavourite, setIsFavourite] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const favourites = JSON.parse(localStorage.getItem('mm_favourites') || '[]');
+      return favourites.includes(movie.id);
+    }
+    return false;
+  });
+
+  const toggleFavourite = () => {
+    if (typeof window !== 'undefined') {
+      const favourites = JSON.parse(localStorage.getItem('mm_favourites') || '[]');
+      const favouriteMovies = JSON.parse(localStorage.getItem('mm_favourite_movies') || '[]');
+      
+      if (isFavourite) {
+        // Remove from favourites
+        const newFavourites = favourites.filter((id: number) => id !== movie.id);
+        const newFavouriteMovies = favouriteMovies.filter((m: Recommendation) => m.id !== movie.id);
+        localStorage.setItem('mm_favourites', JSON.stringify(newFavourites));
+        localStorage.setItem('mm_favourite_movies', JSON.stringify(newFavouriteMovies));
+      } else {
+        // Add to favourites
+        const newFavourites = [...favourites, movie.id];
+        const newFavouriteMovies = [...favouriteMovies.filter((m: Recommendation) => m.id !== movie.id), movie];
+        localStorage.setItem('mm_favourites', JSON.stringify(newFavourites));
+        localStorage.setItem('mm_favourite_movies', JSON.stringify(newFavouriteMovies));
+      }
+      setIsFavourite(!isFavourite);
+      
+      // Dispatch custom event to update favourites page if it's open
+      window.dispatchEvent(new Event('favouriteUpdated'));
+    }
+  };
+
+  const shouldTruncate = movie.overview.length > 150;
+  const displayOverview = isExpanded ? movie.overview : (shouldTruncate ? movie.overview.slice(0, 150) + '...' : movie.overview);
+
   return (
     <article className="group flex h-full w-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all hover:shadow-lg">
       {movie.posterUrl && (
@@ -23,6 +63,20 @@ export default function MovieCard({ movie }: { movie: Recommendation }) {
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
           />
+          <button
+            onClick={toggleFavourite}
+            className="absolute top-2 right-2 rounded-full bg-white/90 p-2 shadow-md transition-all hover:bg-white hover:scale-110"
+            aria-label={isFavourite ? `Remove ${movie.title} from favourites` : `Add ${movie.title} to favourites`}
+          >
+            <svg 
+              className={`h-5 w-5 ${isFavourite ? 'fill-[#e94560] text-[#e94560]' : 'fill-none text-gray-600'}`}
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </button>
         </div>
       )}
       <div className="flex flex-1 flex-col space-y-3 p-5">
@@ -82,9 +136,20 @@ export default function MovieCard({ movie }: { movie: Recommendation }) {
           </p>
         )}
 
-        <p className="flex-1 text-sm leading-relaxed text-gray-700 line-clamp-3">
-          {movie.overview}
-        </p>
+        <div className="flex-1">
+          <p className="text-sm leading-relaxed text-gray-700">
+            {displayOverview}
+          </p>
+          {shouldTruncate && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="mt-1 text-sm font-medium text-[#ff6b9d] hover:text-[#ffa07a] transition-colors"
+              aria-expanded={isExpanded}
+            >
+              {isExpanded ? 'Read less' : 'Read more'}
+            </button>
+          )}
+        </div>
 
         {movie.reason && (
           <div className="rounded-lg bg-gradient-to-r from-[#e94560] to-[#ff6b9d] p-4 border-2 border-[#e94560]">
@@ -111,17 +176,17 @@ export default function MovieCard({ movie }: { movie: Recommendation }) {
 
           {movie.trailerUrl && (
             <a 
-            className="inline-flex items-center gap-2 text-sm font-medium text-[#ff6b9d] transition-colors hover:text-[#ffa07a] hover:underline focus:outline-none focus:ring-2 focus:ring-[#e94560] focus:ring-offset-2 rounded" 
-            href={movie.trailerUrl}
-            target="_blank" 
-            rel="noreferrer"
-            aria-label={`Watch trailer for ${movie.title}`}
-          >
-            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-            </svg>
-            Watch trailer
-          </a>
+              className="inline-flex items-center gap-2 text-sm font-medium text-[#ff6b9d] transition-colors hover:text-[#ffa07a] hover:underline focus:outline-none focus:ring-2 focus:ring-[#e94560] focus:ring-offset-2 rounded" 
+              href={movie.trailerUrl}
+              target="_blank" 
+              rel="noreferrer"
+              aria-label={`Watch trailer for ${movie.title}`}
+            >
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+              </svg>
+              Watch trailer
+            </a>
           )}
         </div>
       </div>

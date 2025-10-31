@@ -96,18 +96,45 @@ function generateExampleSearches(): string[] {
 
 export default function SearchForm({ onResults }: Props) {
   const [queryText, setQueryText] = useState("");
-  const [providers, setProviders] = useState<number[]>([9, 8, 188, 337]); // Amazon Prime, Netflix, BBC iPlayer, Disney Plus
   const [exampleSearches, setExampleSearches] = useState<string[]>([]);
+  
+  // Load streaming services from localStorage or use defaults
+  const [providers, setProviders] = useState<number[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('mm_streaming_services');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        } catch (e) {
+          console.error('Failed to parse saved streaming services:', e);
+        }
+      }
+    }
+    return [9, 8, 188, 337]; // Amazon Prime, Netflix, BBC iPlayer, Disney Plus
+  });
 
   // Generate new examples on mount - different each time
   useEffect(() => {
     setExampleSearches(generateExampleSearches());
   }, []);
 
+  // Save to localStorage whenever providers change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('mm_streaming_services', JSON.stringify(providers));
+    }
+  }, [providers]);
+
   function toggleProvider(id: number) {
-    setProviders((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
-    );
+    setProviders((prev) => {
+      const updated = prev.includes(id) 
+        ? prev.filter((p) => p !== id) 
+        : [...prev, id];
+      return updated;
+    });
   }
 
   function loadExample(example: string) {
