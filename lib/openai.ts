@@ -8,29 +8,29 @@ export async function generateMovieRecommendations(userQuery: string, streamingS
     const servicesText = streamingServices.length > 0 ? ` available on ${streamingServices.join(', ')} in the UK` : '';
     const prompt = `User query: "${userQuery}"
 
-Generate 10-12 movie recommendations${servicesText}. Prioritize:
-1. Arthouse, international, and lesser-known films (60-70% of recommendations)
-2. Hidden gems and critically acclaimed but underappreciated films
-3. A mix of mainstream and arthouse to ensure diversity
-4. Films that match any specific criteria mentioned (ratings, runtime, genres, directors, actors, themes)
+Generate 20–24 thoughtful movie recommendations${servicesText}.
 
-Return ONLY a JSON array of objects with this exact structure:
+Prioritize these goals:
+	1.	Arthouse, international, and distinctive films (about 60–70% of the list) — emphasize works known for strong artistic vision, innovative storytelling, or cultural significance.
+	2.	Hidden gems and critically acclaimed but underappreciated titles — highlight films that deserve more attention or acclaim.
+	3.	Include a few well-chosen mainstream or popular films that still align with the user's tastes, to ensure variety and accessibility.
+	4.	Match any specific criteria the user mentions (actors, directors, genres, themes, ratings, runtime, language, etc.).
+	5.	Maintain diversity — mix of genres, countries, and eras.
+
+Output format:
+Return only a valid JSON array of objects in this exact structure (no markdown, no extra text):
+
 [
-  {"title": "Movie Title", "year": 2020, "reason": "One sentence explaining why the user might like this film based on their query. Be specific about what makes it special - cinematography, themes, performances, or unique storytelling."}
-]
-
-Requirements:
-- Return ONLY valid JSON, no markdown, no explanations
-- Match the user's preferences from their query (actors, directors, genres, themes, ratings, runtime, etc.)
-- Include diverse recommendations (mix of genres, eras, countries)
-- Prefer arthouse, international, and lesser-known films over blockbusters
-- Reasons should be specific, insightful, and avoid spoilers
-- If year is unknown, omit it
-- Prioritize quality films that the user may not have discovered yet`;
+{
+"title": "Movie Title",
+"year": 2020,
+"reason": "A single, specific sentence explaining why this film fits the user's interests — highlight what makes it special (themes, tone, performances, cinematography, or storytelling style) without spoilers."
+}
+]`;
 
     const res = await client.messages.create({
       model: "claude-3-haiku-20240307",
-      max_tokens: 2000,
+      max_tokens: 4000, // Increased for 24 recommendations
       system: "You are a movie recommendation expert. Always return valid JSON only.",
       messages: [
         { role: "user", content: prompt },

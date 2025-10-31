@@ -8,13 +8,14 @@ export default function StreamingBadge({ provider }: { provider: StreamingProvid
 
   if (logoUrl) {
     return (
-      <div className="relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-white shadow-md ring-1 ring-gray-300">
+      <div className="relative aspect-square w-full flex-shrink-0 overflow-hidden rounded-lg bg-white shadow-md ring-1 ring-gray-300 flex items-center justify-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img 
           src={logoUrl} 
           alt={provider.name}
-          className="h-full w-full object-contain p-2"
+          className="max-h-full max-w-full object-contain p-2"
           loading="lazy"
+          style={{ objectPosition: 'center' }}
         />
       </div>
     );

@@ -2,13 +2,17 @@
 
 import { useEffect, useState } from "react";
 import MovieCard from "@/components/MovieCard";
-import type { Recommendation } from "@/types/movie";
+import UnmatchedMovieCard from "@/components/UnmatchedMovieCard";
+import LoadingProgress from "@/components/LoadingProgress";
+import type { Recommendation, UnmatchedRecommendation } from "@/types/movie";
 
 export default function RecommendationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<Recommendation[]>([]);
   const [otherServices, setOtherServices] = useState<Recommendation[]>([]);
+  const [unmatched, setUnmatched] = useState<UnmatchedRecommendation[]>([]);
+  const [query, setQuery] = useState<string>("");
 
   useEffect(() => {
     const raw = sessionStorage.getItem("mm_last_query");
@@ -18,6 +22,7 @@ export default function RecommendationsPage() {
       return;
     }
     const payload = JSON.parse(raw);
+    setQuery(payload.query || "");
     fetch("/api/recommend", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -31,8 +36,14 @@ export default function RecommendationsPage() {
         return json;
       })
       .then((json) => {
+        console.log('API Response:', {
+          recommendations: json.recommendations?.length || 0,
+          otherServices: json.otherServices?.length || 0,
+          unmatched: json.unmatched?.length || 0,
+        });
         setData(json.recommendations ?? []);
         setOtherServices(json.otherServices ?? []);
+        setUnmatched(json.unmatched ?? []);
       })
       .catch((e) => {
         console.error('Error fetching recommendations:', e);
@@ -42,12 +53,7 @@ export default function RecommendationsPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-[#e94560] border-t-transparent"></div>
-        <p className="text-lg text-gray-300">Loading recommendations…</p>
-      </div>
-    );
+    return <LoadingProgress />;
   }
   if (error) {
     return (
@@ -58,7 +64,8 @@ export default function RecommendationsPage() {
       </div>
     );
   }
-  if (!data.length) {
+  // Show unmatched or other services even if main recommendations are empty
+  if (!data.length && !otherServices.length && !unmatched.length) {
     return (
       <div className="text-center py-8">
         <p className="text-gray-300">No recommendations found. Try adjusting your filters.</p>
@@ -69,21 +76,29 @@ export default function RecommendationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Your Recommendations</h2>
-        <div className="flex gap-4">
-          <a href="/favourites" className="text-sm text-[#ff6b9d] hover:text-[#ffa07a] hover:underline transition-colors">
-            My Favourites
-          </a>
-          <a href="/" className="text-sm text-[#ff6b9d] hover:text-[#ffa07a] hover:underline transition-colors">← New search</a>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-white">Your Recommendations</h2>
+          <div className="flex gap-4">
+            <a href="/favourites" className="text-sm text-[#ff6b9d] hover:text-[#ffa07a] hover:underline transition-colors">
+              My Favourites
+            </a>
+            <a href="/" className="text-sm text-[#ff6b9d] hover:text-[#ffa07a] hover:underline transition-colors">← New search</a>
+          </div>
         </div>
+        {query && (
+          <div className="rounded-lg border border-white/20 bg-white/5 px-4 py-3 backdrop-blur-sm">
+            <p className="text-sm text-gray-400 mb-1">Search query:</p>
+            <p className="text-base font-medium text-gray-200 italic">"{query}"</p>
+          </div>
+        )}
       </div>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
         {data.map((rec) => (
           <MovieCard key={rec.id} movie={rec} />
         ))}
       </div>
-      {data.length < 6 && otherServices.length > 0 && (
+      {otherServices.length > 0 && (
         <div className="mt-12 space-y-6">
           <div className="border-t border-white/20 pt-6">
             <h3 className="text-xl font-bold text-white mb-2">Available on Other Streaming Services</h3>
@@ -91,6 +106,19 @@ export default function RecommendationsPage() {
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
               {otherServices.map((rec) => (
                 <MovieCard key={rec.id} movie={rec} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {unmatched.length > 0 && (
+        <div className="mt-12 space-y-6">
+          <div className="border-t border-white/20 pt-6">
+            <h3 className="text-xl font-bold text-white mb-2">Additional Recommendations</h3>
+            <p className="text-sm text-gray-400 mb-4">These films were recommended by AI but couldn't be found in our database. You can search for them on other platforms.</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {unmatched.map((rec, idx) => (
+                <UnmatchedMovieCard key={idx} recommendation={rec} />
               ))}
             </div>
           </div>

@@ -91,6 +91,18 @@ export async function getMovieDetails(movieId: number) {
   return tmdbFetch(`/movie/${movieId}`, { language: 'en-GB' });
 }
 
+export async function getMovieReleaseDates(movieId: number) {
+  const data = await tmdbFetch(`/movie/${movieId}/release_dates`);
+  // Find UK (GB) certification
+  const ukRelease = data.results?.find((r: { iso_3166_1: string }) => r.iso_3166_1 === 'GB');
+  if (ukRelease?.release_dates && ukRelease.release_dates.length > 0) {
+    // Get the first certification (usually the theatrical release)
+    const certification = ukRelease.release_dates.find((rd: { certification?: string }) => rd.certification)?.certification;
+    return certification || null;
+  }
+  return null;
+}
+
 export function tmdbImage(path?: string | null, size: 'w342' | 'w500' = 'w342') {
   if (!path) return null;
   return `https://image.tmdb.org/t/p/${size}${path}`;

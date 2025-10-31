@@ -7,9 +7,7 @@ export default function HomePage() {
   const router = useRouter();
 
   return (
-    <main>
-      <SearchForm onResults={() => router.push("/recommendations")}/>
-    </main>
+    <SearchForm onResults={() => router.push("/recommendations")}/>
   );
 }
 

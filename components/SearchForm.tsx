@@ -66,7 +66,7 @@ function generateExampleSearches(): string[] {
     "quick watches under 1h 30m",
     "films under 2 hours"
   ];
-  const genreForRuntime = getRandom([...ARTHOUSE_GENRES, "indie dramas", "documentaries", "short films"]);
+  const genreForRuntime = getRandom([...ARTHOUSE_GENRES, "indie dramas", "short films"]);
   examples.push(`${genreForRuntime} with ${getRandom(runtimeFilters)}`);
   
   // 5. Actor + arthouse preference
@@ -139,6 +139,15 @@ export default function SearchForm({ onResults }: Props) {
 
   function loadExample(example: string) {
     setQueryText(example);
+    // Auto-submit after a brief delay to ensure state is updated
+    setTimeout(() => {
+      const payload = {
+        query: example.trim(),
+        streamingServices: providers,
+      };
+      sessionStorage.setItem("mm_last_query", JSON.stringify(payload));
+      onResults?.();
+    }, 100);
   }
 
   function onSubmit(e: React.FormEvent) {

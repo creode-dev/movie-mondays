@@ -18,6 +18,7 @@ export type Recommendation = {
   providers: StreamingProvider[];
   director?: string | null;
   actors?: string[]; // Top 3-4 actors
+  ageRating?: string | null; // UK age rating (e.g., "12", "PG", "15", "18", "R")
 };
 
 export type RecommendRequest = {
@@ -26,6 +27,12 @@ export type RecommendRequest = {
   directors?: string[];
   themes?: string[];
   streamingServices?: number[]; // TMDB provider IDs
+};
+
+export type UnmatchedRecommendation = {
+  title: string;
+  year?: number;
+  reason: string;
 };
 
 
