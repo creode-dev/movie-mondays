@@ -26,68 +26,49 @@ const UK_PROVIDER_OPTIONS: { id: number; name: string }[] = [
   { id: 68, name: "Microsoft Store" },
 ].sort((a, b) => a.name.localeCompare(b.name));
 
-// Template pools for generating dynamic examples
-const ARTHOUSE_DIRECTORS = ["Akira Kurosawa", "Ingmar Bergman", "Andrei Tarkovsky", "Wong Kar-wai", "Chantal Akerman", "Apichatpong Weerasethakul", "Agnès Varda", "Jean-Luc Godard", "Jim Jarmusch", "Terrence Malick", "Yasujirō Ozu", "Federico Fellini"];
-const ARTHOUSE_GENRES = ["slow cinema", "art house dramas", "experimental films", "international cinema", "contemporary world cinema", "postmodern cinema", "foreign language films", "auteur cinema"];
-const MAINSTREAM_GENRES = ["sci-fi thrillers", "psychological dramas", "dark comedies", "neo-noir", "coming-of-age stories", "indie dramas"];
-const ACTORS_OBSCURE = ["Tilda Swinton", "Isabelle Huppert", "Tony Leung", "Charlotte Rampling", "Willem Dafoe", "Juliette Binoche"];
-const ACTORS_MAINSTREAM = ["Joaquin Phoenix", "Toni Collette", "Adam Driver", "Florence Pugh", "Paul Mescal"];
-const THEMES = ["existentialism", "memory and time", "identity crisis", "urban alienation", "found family", "moral ambiguity", "loss and grief", "social commentary"];
+// Fallback examples in case AI fails
+const FALLBACK_EXAMPLES = {
+  director: "Akira Kurosawa",
+  actor: "Tilda Swinton",
+  genre: "slow cinema",
+  theme: "existentialism",
+  ratingFilter: "rating over 7 on IMDB",
+  runtimeFilter: "running time less than 2 hours"
+};
 
-function generateExampleSearches(): string[] {
+function generateExampleSearches(aiExamples: typeof FALLBACK_EXAMPLES): string[] {
   const examples: string[] = [];
   
-  // Helper to get random item from array
-  const getRandom = <T,>(arr: T[]): T => {
-    return arr[Math.floor(Math.random() * arr.length)];
-  };
+  // 1. Director example
+  examples.push(`${aiExamples.director} films`);
   
-  // 1. Arthouse director example (always include one)
-  examples.push(`${getRandom(ARTHOUSE_DIRECTORS)} films`);
+  // 2. Genre with theme
+  examples.push(`${aiExamples.genre} exploring ${aiExamples.theme}`);
   
-  // 2. Arthouse genre with theme
-  examples.push(`${getRandom(ARTHOUSE_GENRES)} exploring ${getRandom(THEMES)}`);
-  
-  // 3. Rating filter example - mix of mainstream and arthouse
-  const ratingFilters = [
-    "rating over 7 on IMDB",
-    "IMDB rating over 7.5",
-    "IMDB rating over 8",
-    "highly rated (IMDB over 7)"
-  ];
-  const genreForRating = getRandom([...ARTHOUSE_GENRES, ...MAINSTREAM_GENRES]);
-  examples.push(`${genreForRating} with ${getRandom(ratingFilters)}`);
+  // 3. Rating filter example
+  const genreForRating = aiExamples.genre;
+  examples.push(`${genreForRating} with ${aiExamples.ratingFilter}`);
   
   // 4. Runtime filter example
-  const runtimeFilters = [
-    "running time less than 2 hours",
-    "movies under 90 minutes",
-    "shorter films under 100 minutes",
-    "quick watches under 1h 30m",
-    "films under 2 hours"
-  ];
-  const genreForRuntime = getRandom([...ARTHOUSE_GENRES, "indie dramas", "short films"]);
-  examples.push(`${genreForRuntime} with ${getRandom(runtimeFilters)}`);
+  examples.push(`${aiExamples.genre} with ${aiExamples.runtimeFilter}`);
   
-  // 5. Actor + arthouse preference
-  const actor = getRandom([...ACTORS_OBSCURE, ...ACTORS_MAINSTREAM]);
-  const actorGenre = getRandom([...ARTHOUSE_GENRES, "indie films"]);
-  examples.push(`${actor} in ${actorGenre}`);
+  // 5. Actor + genre preference
+  examples.push(`${aiExamples.actor} in ${aiExamples.genre}`);
   
   // 6. International/obscure films
   const obscureOptions = [
-    `International ${getRandom(ARTHOUSE_GENRES)}`,
-    `Obscure ${getRandom(ARTHOUSE_GENRES)} from international filmmakers`,
-    `Underrated ${getRandom(ARTHOUSE_GENRES)}`,
-    `Hidden gem ${getRandom(ARTHOUSE_GENRES)}`
+    `International ${aiExamples.genre}`,
+    `Obscure ${aiExamples.genre} from international filmmakers`,
+    `Underrated ${aiExamples.genre}`,
+    `Hidden gem ${aiExamples.genre}`
   ];
-  examples.push(getRandom(obscureOptions));
+  examples.push(obscureOptions[Math.floor(Math.random() * obscureOptions.length)]);
   
-  // 7. Combined filters (rating + runtime or theme)
+  // 7. Combined filters
   if (Math.random() > 0.5) {
-    examples.push(`Well-rated ${getRandom(MAINSTREAM_GENRES)} (${getRandom(ratingFilters)}) ${getRandom(runtimeFilters)}`);
+    examples.push(`Well-rated ${aiExamples.genre} (${aiExamples.ratingFilter}) ${aiExamples.runtimeFilter}`);
   } else {
-    examples.push(`${getRandom(ARTHOUSE_GENRES)} with ${getRandom(THEMES)} and ${getRandom(ratingFilters)}`);
+    examples.push(`${aiExamples.genre} with ${aiExamples.theme} and ${aiExamples.ratingFilter}`);
   }
   
   // Shuffle and return 6 examples
@@ -97,6 +78,7 @@ function generateExampleSearches(): string[] {
 export default function SearchForm({ onResults }: Props) {
   const [queryText, setQueryText] = useState("");
   const [exampleSearches, setExampleSearches] = useState<string[]>([]);
+  const [loadingExamples, setLoadingExamples] = useState(true);
   
   // Load streaming services from localStorage or use defaults
   const [providers, setProviders] = useState<number[]>(() => {
@@ -116,9 +98,26 @@ export default function SearchForm({ onResults }: Props) {
     return [9, 8, 188, 337]; // Amazon Prime, Netflix, BBC iPlayer, Disney Plus
   });
 
-  // Generate new examples on mount - different each time
+  // Generate new AI examples on mount - different each time
   useEffect(() => {
-    setExampleSearches(generateExampleSearches());
+    async function loadAIExamples() {
+      setLoadingExamples(true);
+      try {
+        const response = await fetch('/api/generate-examples');
+        const aiExamples = await response.json();
+        const examples = generateExampleSearches(aiExamples);
+        setExampleSearches(examples);
+      } catch (error) {
+        console.error('Failed to load AI examples, using fallback:', error);
+        // Use fallback examples if AI fails
+        const examples = generateExampleSearches(FALLBACK_EXAMPLES);
+        setExampleSearches(examples);
+      } finally {
+        setLoadingExamples(false);
+      }
+    }
+    
+    loadAIExamples();
   }, []);
 
   // Save to localStorage whenever providers change
@@ -166,7 +165,9 @@ export default function SearchForm({ onResults }: Props) {
       <div>
         <p className="mb-2 text-sm text-gray-300">Quick examples:</p>
         <div className="flex flex-wrap gap-2">
-          {exampleSearches.length > 0 ? (
+          {loadingExamples ? (
+            <div className="text-xs text-gray-400">Generating fresh examples...</div>
+          ) : exampleSearches.length > 0 ? (
             exampleSearches.map((example, idx) => (
               <button
                 key={idx}
@@ -178,7 +179,7 @@ export default function SearchForm({ onResults }: Props) {
               </button>
             ))
           ) : (
-            <div className="text-xs text-gray-400">Loading examples...</div>
+            <div className="text-xs text-gray-400">No examples available</div>
           )}
         </div>
       </div>

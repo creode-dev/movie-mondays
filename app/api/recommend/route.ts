@@ -218,27 +218,43 @@ export async function POST(req: NextRequest) {
     const processedTitles = new Set<string>();
     const processedMovieIds = new Set<number>(); // Track by movie ID to prevent duplicates
     
-    for (let i = 0; i < aiRecommendations.length; i++) {
-      const aiRec = aiRecommendations[i];
-      try {
+    // Process movies in parallel batches for better performance
+    // Batch size of 5 ensures we don't overwhelm APIs while still getting good parallelism
+    const BATCH_SIZE = 5;
+    const batches: typeof aiRecommendations[] = [];
+    
+    for (let i = 0; i < aiRecommendations.length; i += BATCH_SIZE) {
+      batches.push(aiRecommendations.slice(i, i + BATCH_SIZE));
+    }
+    
+    // Process each batch in parallel
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex];
+      const batchPromises = batch.map(async (aiRec, batchItemIndex) => {
+        try {
+        // Calculate the original index in aiRecommendations array
+        const originalIndex = batchIndex * BATCH_SIZE + batchItemIndex;
+        
         let movie: { id: number; title?: string; name?: string; overview: string; release_date?: string; poster_path?: string | null };
         
         // If fallback, use the movie directly (already matched)
-        if (isFallback && fallbackMovies[i]) {
-          movie = fallbackMovies[i];
+        if (isFallback && fallbackMovies[originalIndex]) {
+          movie = fallbackMovies[originalIndex];
         } else {
           // Search TMDB for the movie - improve matching to prevent wrong matches
           const searchResults = await searchMovies(aiRec.title);
           if (!searchResults.length) {
             // No search results found - add to unmatched (NOT filtered out)
             console.log(`[Recommendations] Movie not found in TMDB: "${aiRec.title}" - adding to unmatched`);
-            unmatchedRecommendations.push({
-              title: aiRec.title,
-              year: aiRec.year,
-              reason: aiRec.reason
-            });
             processedTitles.add(aiRec.title.toLowerCase());
-            continue;
+            return {
+              unmatched: {
+                title: aiRec.title,
+                year: aiRec.year,
+                reason: aiRec.reason
+              },
+              success: false
+            };
           }
 
           // Try to match by exact title first, then by year, then use first result
@@ -271,13 +287,14 @@ export async function POST(req: NextRequest) {
         }
 
         // CRITICAL: Check if we've already processed this movie ID to prevent duplicates
+        // Use a lock mechanism since we're in parallel
         if (processedMovieIds.has(movie.id)) {
           console.log(`[Recommendations] Skipping duplicate movie ID ${movie.id}: "${movie.title || movie.name || aiRec.title}" (already processed)`);
           processedTitles.add(aiRec.title.toLowerCase());
-          continue;
+          return { success: false as const, skipped: true as const };
         }
         
-        // Mark this movie ID as processed
+        // Mark this movie ID as processed (atomic operation)
         processedMovieIds.add(movie.id);
 
         // Get movie details - wrap release dates in try-catch as it's non-critical
@@ -302,7 +319,7 @@ export async function POST(req: NextRequest) {
         if (isDocumentary) {
           console.log(`[Recommendations] Filtering out documentary: "${aiRec.title}" (genre IDs: ${genres.map((g: { id: number }) => g.id).join(', ')})`);
           processedTitles.add(aiRec.title.toLowerCase());
-          continue;
+          return { success: false as const, skipped: true as const, reason: 'documentary' as const };
         }
         
         // Extract director and top actors
@@ -320,6 +337,9 @@ export async function POST(req: NextRequest) {
           runtime = match ? parseInt(match[1]) : null;
         }
 
+        // Define movieTitle early so it can be used in filtering logic
+        const movieTitle = movie.title || movie.name || aiRec.title;
+
         // Filter by runtime constraints if specified in query
         if (runtime !== null && (runtimeConstraints.maxMinutes !== null || runtimeConstraints.minMinutes !== null)) {
           const runtimeMatches = 
@@ -329,7 +349,7 @@ export async function POST(req: NextRequest) {
           if (!runtimeMatches) {
             console.log(`[Recommendations] Filtering out "${movieTitle}" - Runtime ${runtime}min doesn't match constraints (max: ${runtimeConstraints.maxMinutes}, min: ${runtimeConstraints.minMinutes})`);
             processedTitles.add(aiRec.title.toLowerCase());
-            continue;
+            return { success: false as const, skipped: true as const, reason: 'runtime' as const };
           }
         }
 
@@ -337,7 +357,6 @@ export async function POST(req: NextRequest) {
         const trailerUrl = trailerKey ? `https://www.youtube.com/watch?v=${trailerKey}` : null;
 
         const providersList: StreamingProvider[] = [];
-        const movieTitle = movie.title || movie.name || aiRec.title;
         
         // Handle streaming providers - with better error handling and retry logic
         let watch: any = null;
@@ -405,53 +424,88 @@ export async function POST(req: NextRequest) {
           providers: [], // Will be set below
         };
 
-        // Decide where to place the movie based on streaming availability
-        // IMPORTANT: All movies MUST go to either recommendations or otherServicesRecommendations or unmatched
-        // Never filter out completely
-        // RULE: Main recommendations should ONLY have movies available on user's selected services
+        // Log where movie will be placed
         if (providers.length > 0) {
-          // User has selected services - be strict about main recommendations
           if (filteredProviders.length > 0) {
-            // Movie IS on user's selected services - main recommendations
             console.log(`[Recommendations] "${movieRec.title}" → Main Recommendations (has ${filteredProviders.length} matching providers)`);
+          } else if (providersList.length > 0) {
+            console.log(`[Recommendations] "${movieRec.title}" → Other Services (has ${providersList.length} providers, none match user selection)`);
+          } else {
+            console.log(`[Recommendations] "${movieRec.title}" → Other Services (no providers available)`);
+          }
+        } else {
+          console.log(`[Recommendations] "${movieRec.title}" → Main Recommendations (no service filter)`);
+        }
+        
+        processedTitles.add(aiRec.title.toLowerCase());
+        
+        // Return the result for this movie
+        return {
+          success: true as const,
+          recommendation: movieRec,
+          filteredProviders,
+          providersList
+        };
+      } catch (e) {
+        // Error processing movie - add to unmatched (NOT filtered out)
+        console.error(`[Recommendations] Error processing "${aiRec.title}":`, e);
+        processedTitles.add(aiRec.title.toLowerCase());
+        return {
+          success: false as const,
+          skipped: false as const,
+          unmatched: {
+            title: aiRec.title,
+            year: aiRec.year,
+            reason: aiRec.reason
+          }
+        };
+      }
+    });
+    
+      // Wait for batch to complete
+      const batchResults = await Promise.all(batchPromises);
+      
+      // Process batch results
+      for (const result of batchResults) {
+        if (!result.success) {
+          if ('skipped' in result && result.skipped) {
+            continue; // Duplicate was skipped, nothing to do
+          }
+          if ('unmatched' in result && result.unmatched) {
+            unmatchedRecommendations.push(result.unmatched);
+          }
+          continue;
+        }
+        
+        // TypeScript knows result.success is true here, so these fields exist
+        // Use type assertion since we've already checked result.success
+        const successResult = result as { success: true; recommendation: Recommendation; filteredProviders: StreamingProvider[]; providersList: StreamingProvider[] };
+        const { recommendation: movieRec, filteredProviders, providersList } = successResult;
+        
+        // Decide where to place the movie based on streaming availability
+        if (providers.length > 0) {
+          if (filteredProviders.length > 0) {
             recommendations.push({
               ...movieRec,
               providers: filteredProviders,
             });
           } else if (providersList.length > 0) {
-            // Movie has providers but NOT on user's selected services - other services section
-            console.log(`[Recommendations] "${movieRec.title}" → Other Services (has ${providersList.length} providers, none match user selection)`);
             otherServicesRecommendations.push({
               ...movieRec,
               providers: [...providersList],
             });
           } else {
-            // Movie has NO providers at all - still go to other services (not main)
-            console.log(`[Recommendations] "${movieRec.title}" → Other Services (no providers available)`);
             otherServicesRecommendations.push({
               ...movieRec,
               providers: [],
             });
           }
         } else {
-          // User hasn't selected any services - show all movies in main recommendations
-          console.log(`[Recommendations] "${movieRec.title}" → Main Recommendations (no service filter)`);
           recommendations.push({
             ...movieRec,
             providers: providersList,
           });
         }
-        
-        processedTitles.add(aiRec.title.toLowerCase());
-      } catch (e) {
-        // Error processing movie - add to unmatched (NOT filtered out)
-        console.error(`[Recommendations] Error processing "${aiRec.title}":`, e);
-        unmatchedRecommendations.push({
-          title: aiRec.title,
-          year: aiRec.year,
-          reason: aiRec.reason
-        });
-        processedTitles.add(aiRec.title.toLowerCase());
       }
     }
     
